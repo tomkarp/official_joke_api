@@ -1,6 +1,6 @@
 const express = require('express');
 const LimitingMiddleware = require('limiting-middleware');
-const { randomJoke, randomTen, randomSelect, jokeByType, jokeById } = require('./handler');
+const { types, randomJoke, randomTen, randomSelect, jokeByType, jokeById, count } = require('./handler');
 
 const app = express();
 
@@ -12,7 +12,7 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('Try /random_joke, /random_ten, /jokes/random, or /jokes/ten');
+  res.send('Try /random_joke, /random_ten, /jokes/random, or /jokes/ten , /jokes/random/<any-number>');
 });
 
 app.get('/ping', (req, res) => {
@@ -31,23 +31,22 @@ app.get('/jokes/random', (req, res) => {
   res.json(randomJoke());
 });
 
-// TODO: Needs fixing
-app.get("/jokes/random(/*)?", (req, res) => {
+app.get("/jokes/random/:num", (req, res) => {
   let num;
-
   try {
-    num = parseInt(req.path.substring(14, req.path.length));
-  } catch (err) {
-    res.send("The passed path is not a number.");
-  } finally {
-    const count = Object.keys(jokes).length;
-
-    if (num > Object.keys(jokes).length) {
-      res.send(`The passed path exceeds the number of jokes (${count}).`);
+    num = parseInt(req.params.num);
+    if (!num) {
+      res.send("The passed path is not a number.");
     } else {
-      res.json(randomSelect(num));
+      if (num > count) {
+        res.send(`The passed path exceeds the number of jokes (${count}).`);
+      } else {
+        res.json(randomSelect(num));
+      }
     }
-  }
+  } catch (e) {
+    return next(e);
+  } 
 });
 
 app.get('/jokes/ten', (req, res) => {
@@ -73,6 +72,10 @@ app.get('/jokes/:id', (req, res, next) => {
   }
 });
 
+app.get('/types', (req, res, next) => {
+  res.json(types);
+})
+
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
 
@@ -83,3 +86,4 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => console.log(`listening on ${PORT}`));
+
